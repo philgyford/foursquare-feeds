@@ -87,7 +87,3 @@ If the file is generated in a location on your website that's publicly-readable,
 
 Note that the file might contain private checkins or information you don't want to be public. In which case, probably best to make the name of any such publicly-readable file very obscure.
 
-
-## TODO
-
-* Upgrade `ics` when there's a release newer than 0.4. We currently use a specific commit because it's newer than 0.4 and uses a newer version of arrow, which we need for timezone shifts.
