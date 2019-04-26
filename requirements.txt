@@ -3,7 +3,7 @@
 arrow==0.11.0
 certifi==2019.3.9
 chardet==3.0.4
-foursquare==1!2019.2.16
+foursquare==1\!2019.2.16
 idna==2.8
 python-dateutil==2.8.0
 requests==2.21.0
