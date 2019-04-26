@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import configparser
 import logging
+import os
+import sys
 
 import arrow
 import foursquare
@@ -9,7 +11,9 @@ from ics import Calendar, Event
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
-CONFIG_FILE = "config.ini"
+
+current_dir = os.path.realpath(os.path.dirname(__file__))
+CONFIG_FILE = os.path.join(current_dir, "config.ini")
 
 # How many to fetch and use. Up to 250.
 NUM_CHECKINS = 100
