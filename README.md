@@ -45,7 +45,7 @@ In a terminal window, open a python shell:
 
     $ python
 
-and, using your app's Client ID and Client Secret enter this:
+and, using your app's Client ID and Client Secret in place of `YOUR_CLIENT_ID` and `YOUR_CLIENT_SECRET` enter this:
 
 ```python
 import foursquare
@@ -65,7 +65,8 @@ Your browser should redirect to a URL like the one below, with an error about no
 
 Copy the code represented by `XX_CODE_RETURNED_IN_REDIRECT_XX` (note that there may be an extra `#_=_` on the end which *you should not copy*).
 
-Back in your python shell, with that code:
+Back in your python shell, with that code, enter this, replacing
+`XX_CODE_RETURNED_IN_REDIRECT_XX` with the code you just copied:
 
 ```python
 client.oauth.get_token('XX_CODE_RETURNED_IN_REDIRECT_XX')
