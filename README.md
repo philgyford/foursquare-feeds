@@ -1,6 +1,6 @@
 # Foursquare Feeds
 
-A python script that will generate a iCal (`.ics`) feed of your recent checkins on [Foursquare][4sq]/[Swarm][swarm].
+A python script that will generate an iCal (`.ics`) feed of your recent checkins on [Foursquare][4sq]/[Swarm][swarm]. If you set it up to save this file to a publicly-visible location on a webserver, and run the script regularly, you can subscribe to the feed in your favourite calendar application.
 
 Foursquare [used to have such feeds][feeds] but they've stopped working for me.
 
@@ -76,15 +76,15 @@ This will output another long code, which is your Access Token.
 
 Enter this in your `config.ini`.
 
-### 5. Run it
+## Run the script
 
-Then run the script:
+You're ready to go:
 
     $ ./generate_feeds.py
 
-It should create an `.ics` file.
+This should create an `.ics` file.
 
-If the file is generated in a location on your website that's publicly-readable, you should be able to subscribe to it from a calendar application. Then run the script periodically to have it update.
+If the file is generated in a location on your website that's publicly-visible, you should be able to subscribe to it from a calendar application. Then run the script periodically to have it update.
 
-Note that the file might contain private checkins or information you don't want to be public. In which case, probably best to make the name of any such publicly-readable file very obscure.
+Note that the file might contain private checkins or information you don't want to be public. In which case, it's probably best to make the name of any such publicly-readable file very obscure.
 
