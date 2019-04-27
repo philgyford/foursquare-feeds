@@ -2,9 +2,7 @@
 import configparser
 import logging
 import os
-import sys
 
-import arrow
 import foursquare
 from ics import Calendar, Event
 
@@ -91,7 +89,8 @@ class FeedGenerator:
             e.uid = "{}@foursquare.com".format(checkin["id"])
             e.begin = checkin["createdAt"]
 
-            # Use the 'shout', if any, and the timezone offset in the description.
+            # Use the 'shout', if any, and the timezone offset in the
+            # description.
             description = []
             if "shout" in checkin and len(checkin["shout"]) > 0:
                 description = [checkin["shout"]]
