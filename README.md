@@ -89,38 +89,46 @@ If the file is generated in a location on your website that's publicly-visible, 
 
 Note that the file might contain private checkins or information you don't want to be public. In which case, it's probably best to make the name of any such publicly-readable file very obscure.
 
-### `--all`
+### Script options
+
+#### `--all`
 
 By default the script only fetches the most recent 250 checkins. To fetch ALL checkins add the `--all` flag:
 
-    $ ./generate_feeds.py --all
+```bash
+$ ./generate_feeds.py --all
+```
 
 Depending on how many checkins you have you might only want to run it with
 `--all` the first time and, once that's imported into a calendar application,
 subsequently only fetch recent checkins.
 
-### `-v` or `--verbose`
+#### `-v` or `--verbose`
 
 By default the script will only output text if something goes wrong. To get
 brief output use `-v` or `--verbose`:
 
-    $ ./generate_feeds.py -v
-    Fetched 250 checkins from the API
-    Generated calendar file ./mycalendar.ics
+```bash
+$ ./generate_feeds.py -v
+Fetched 250 checkins from the API
+Generated calendar file ./mycalendar.ics
+```
 
 If fetching `--all` checkins then increasing the verbosity with another `-v`
 will show more info than the above:
 
-    $ ./generate_feeds.py -vv --all
-    5746 checkins to fetch
-    Fetched checkins 1-250
-    Fetched checkins 251-500
-    [etc]
-    Fetched checkins 5501-5750
-    Fetched 5744 checkins from the API
-    Generated calendar file ./mycalendar.ics
+```bash
+$ ./generate_feeds.py -vv --all
+5746 checkins to fetch
+Fetched checkins 1-250
+Fetched checkins 251-500
+[etc...]
+Fetched checkins 5501-5750
+Fetched 5744 checkins from the API
+Generated calendar file ./mycalendar.ics
+```
 
-(No I don't know why it fetched 2 fewer checkins than I have.)
+(No I don't know why it fetched 2 fewer checkins than it says I have.)
 
 
 ## About
