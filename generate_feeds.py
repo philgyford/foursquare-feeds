@@ -48,10 +48,15 @@ class FeedGenerator:
         else:
             checkins = self._get_recent_checkins()
 
+        plural = "" if len(checkins) == 1 else "s"
+        logger.info("Fetched {} checkin{} from the API".format(len(checkins), plural))
+
         calendar = self._generate_calendar(checkins)
 
         with open(self.ics_filepath, "w") as f:
             f.writelines(calendar)
+
+        logger.info("Generated calendar file {}".format(self.ics_filepath))
 
         exit(0)
 
@@ -68,11 +73,16 @@ class FeedGenerator:
         total_checkins = 9999999999
 
         while offset < total_checkins:
+
             results = self._get_checkins_from_api(offset)
 
             if offset == 0:
                 # First time, set the correct total:
                 total_checkins = results["checkins"]["count"]
+                plural = "" if total_checkins == 1 else "s"
+                logger.debug("{} checkin{} to fetch".format(total_checkins, plural))
+
+            logger.debug("Fetched {}-{}".format((offset + 1), (offset + 250)))
 
             checkins += results["checkins"]["items"]
             offset += 250
@@ -199,7 +209,22 @@ if __name__ == "__main__":
         default=False,
     )
 
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        help="-v or --verbose for brief output; -vv for more.",
+        required=False,
+    )
+
     args = parser.parse_args()
+
+    if args.verbose == 1:
+        logger.setLevel(logging.INFO)
+    elif args.verbose == 2:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.WARNING)
 
     if args.all:
         to_fetch = "all"
