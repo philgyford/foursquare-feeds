@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import configparser
 import logging
 import os
@@ -13,13 +14,16 @@ logger = logging.getLogger(__name__)
 current_dir = os.path.realpath(os.path.dirname(__file__))
 CONFIG_FILE = os.path.join(current_dir, "config.ini")
 
-# How many to fetch and use. Up to 250.
-NUM_CHECKINS = 100
-
 
 class FeedGenerator:
-    def __init__(self):
+
+    fetch = "recent"
+
+    def __init__(self, fetch="recent"):
         "Loads config, sets up Foursquare API client."
+
+        self.fetch = fetch
+
         self._load_config(CONFIG_FILE)
 
         self.client = foursquare.Foursquare(access_token=self.api_access_token)
@@ -38,8 +42,11 @@ class FeedGenerator:
         self.ics_filepath = config.get("Local", "IcsFilepath")
 
     def generate(self):
-        ""
-        checkins = self._get_checkins()
+        "Call this to fetch the data from the API and generate the file."
+        if self.fetch == "all":
+            checkins = self._get_all_checkins()
+        else:
+            checkins = self._get_recent_checkins()
 
         calendar = self._generate_calendar(checkins)
 
@@ -48,36 +55,74 @@ class FeedGenerator:
 
         exit(0)
 
-    def _get_checkins(self):
-        "Returns a list of recent checkins for the authenticated user."
+    def _get_recent_checkins(self):
+        "Make one request to the API for the most recent checkins."
+        results = self._get_checkins_from_api()
+        return results["checkins"]["items"]
+
+    def _get_all_checkins(self):
+        "Make multiple requests to the API to get ALL checkins."
+        offset = 0
+        checkins = []
+        # Temporary total:
+        total_checkins = 9999999999
+
+        while offset < total_checkins:
+            results = self._get_checkins_from_api(offset)
+
+            if offset == 0:
+                # First time, set the correct total:
+                total_checkins = results["checkins"]["count"]
+
+            checkins += results["checkins"]["items"]
+            offset += 250
+
+        return checkins
+
+    def _get_checkins_from_api(self, offset=0):
+        """Returns a list of recent checkins for the authenticated user.
+
+        Keyword arguments:
+        offset -- Integer, the offset number to send to the API.
+                  The number of results to skip.
+        """
 
         try:
             return self.client.users.checkins(
-                params={"limit": NUM_CHECKINS, "sort": "newestfirst"}
+                params={"limit": 250, "offset": offset, "sort": "newestfirst"}
             )
-        except foursquare.FoursquareException as e:
-            logger.error("Error getting checkins: {}".format(e))
+        except foursquare.FoursquareException as err:
+            logger.error(
+                "Error getting checkins, with offset of {}: {}".format(offset, err)
+            )
             exit(1)
 
     def _get_user_url(self):
         "Returns the Foursquare URL for the authenticated user."
         try:
             user = self.client.users()
-        except foursquare.FoursquareException as e:
-            logger.error("Error getting user: {}".format(e))
+        except foursquare.FoursquareException as err:
+            logger.error("Error getting user: {}".format(err))
             exit(1)
 
         return user["user"]["canonicalUrl"]
 
     def _generate_calendar(self, checkins):
-        """Supplied with a list of checkin data from the API, generates an
-        ics Calendar object and returns it.
+        """Supplied with a list of checkin data from the API, generates
+        an ics Calendar object and returns it.
+
+        Keyword arguments:
+        checkins -- A list of dicts, each one data about a single checkin.
         """
         user_url = self._get_user_url()
 
         c = Calendar()
 
-        for checkin in checkins["checkins"]["items"]:
+        for checkin in checkins:
+            if "venue" not in checkin:
+                # I had some checkins with no data other than
+                # id, createdAt and source.
+                continue
             venue_name = checkin["venue"]["name"]
             tz_offset = self._get_checkin_timezone(checkin)
 
@@ -118,6 +163,9 @@ class FeedGenerator:
         e.g. if offset is 60,   this returns '+01:00'
              if offset is 0,    this returns '+00:00'
              if offset is -480, this returns '-08:00'
+
+        Keyword arguments
+        checkin -- A dict of data about a single checkin
         """
         # In minutes, e.g. 60 or -480
         minutes = checkin["timeZoneOffset"]
@@ -139,7 +187,27 @@ class FeedGenerator:
 
 if __name__ == "__main__":
 
-    generator = FeedGenerator()
+    parser = argparse.ArgumentParser(
+        description="Makes a .ics file from your Foursquare/Swarm checkins"
+    )
+
+    parser.add_argument(
+        "--all",
+        help="Fetch all checkins, not only the most recent",
+        required=False,
+        action="store_true",
+        default=False,
+    )
+
+    args = parser.parse_args()
+
+    if args.all:
+        to_fetch = "all"
+    else:
+        to_fetch = "recent"
+
+    generator = FeedGenerator(fetch=to_fetch)
+
     generator.generate()
 
     exit(0)
