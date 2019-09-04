@@ -39,6 +39,20 @@ To get the `AccessToken` for your Foursquare app, you will have to go through th
 
 ### 4. Get an access token
 
+There are two ways to do this: (A) The quick way, using a third-party website or (B) the slow way, on the command line. Use (A) unless the website isn't working.
+
+#### (A) The quick way
+
+Go to https://your-foursquare-oauth-token.glitch.me and follow the link to log
+in with Foursquare.
+
+Accept the permissions, and then copy the long code, which is your Access
+Token, into your `config.ini`.
+
+That's it. [Thanks to Simon Willison for that.](https://github.com/dogsheep/swarm-to-sqlite/issues/4)
+
+#### (B) The slow way
+
 On https://foursquare.com/developers/apps, in your app, set the Redirect URI to `http://localhost:8000/`
 
 In a terminal window, open a python shell:
@@ -75,6 +89,7 @@ client.oauth.get_token('XX_CODE_RETURNED_IN_REDIRECT_XX')
 This will output another long code, which is your Access Token.
 
 Enter this in your `config.ini`.
+
 
 ## Run the script
 
