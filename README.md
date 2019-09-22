@@ -18,6 +18,7 @@ Foursquare [used to have such feeds][feeds] but they've stopped working for me.
 
 ## Installation
 
+This should work with python 3.5+.
 
 ### 1. Make a Foursquare app
 
