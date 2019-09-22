@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 import argparse
 import configparser
+from datetime import datetime
 import logging
 import os
+import pytz
+from xml.sax.saxutils import escape as xml_escape
 
 import foursquare
 from ics import Calendar, Event
+import simplekml
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -59,16 +63,11 @@ class FeedGenerator:
         logger.info(f"Fetched {checkins} checkin{plural} from the API")
 
         if kind == "ics":
-            data = self._generate_calendar(checkins)
-            filepath = self.ics_filepath
+            filepath = self._generate_ics_file(checkins)
         elif kind == "kml":
-            data = self._generate_kml(checkins)
-            filepath = self.kml_filepath
+            filepath = self._generate_kml_file(checkins)
 
-        with open(filepath, "w") as f:
-            f.writelines(data)
-
-        logger.info(f"Generated {kind} file {filepath}")
+        logger.info(f"Generated file {filepath}")
 
         exit(0)
 
@@ -117,15 +116,31 @@ class FeedGenerator:
             logger.error(f"Error getting checkins, with offset of {offset}: {err}")
             exit(1)
 
-    def _get_user_url(self):
-        "Returns the Foursquare URL for the authenticated user."
+    def _get_user(self):
+        "Returns details about the authenticated user."
         try:
             user = self.client.users()
         except foursquare.FoursquareException as err:
             logger.error(f"Error getting user: {err}")
             exit(1)
 
-        return user["user"]["canonicalUrl"]
+        return user["user"]
+
+    def _generate_ics_file(self, checkins):
+        """Supplied with a list of checkin data from the API, generates
+        and saves a .ics file.
+
+        Returns the filepath of the saved file.
+
+        Keyword arguments:
+        checkins -- A list of dicts, each one data about a single checkin.
+        """
+        calendar = self._generate_calendar(checkins)
+
+        with open(self.ics_filepath, "w") as f:
+            f.writelines(calendar)
+
+        return self.ics_filepath
 
     def _generate_calendar(self, checkins):
         """Supplied with a list of checkin data from the API, generates
@@ -134,7 +149,7 @@ class FeedGenerator:
         Keyword arguments:
         checkins -- A list of dicts, each one data about a single checkin.
         """
-        user_url = self._get_user_url()
+        user = self._get_user()
 
         c = Calendar()
 
@@ -143,6 +158,7 @@ class FeedGenerator:
                 # I had some checkins with no data other than
                 # id, createdAt and source.
                 continue
+
             venue_name = checkin["venue"]["name"]
             tz_offset = self._get_checkin_timezone(checkin)
 
@@ -150,7 +166,7 @@ class FeedGenerator:
 
             e.name = f"@ {venue_name}"
             e.location = venue_name
-            e.url = f"{user_url}/checkin/{checkin['id']}"
+            e.url = f"{user['canonicalUrl']}/checkin/{checkin['id']}"
             e.uid = f"{checkin['id']}@foursquare.com"
             e.begin = checkin["createdAt"]
 
@@ -175,15 +191,76 @@ class FeedGenerator:
 
         return c
 
-    def _generate_kml(self, checkins):
+    def _generate_kml_file(self, checkins):
         """Supplied with a list of checkin data from the API, generates
-        a TODO
+        and saves a kml file.
+
+        Returns the filepath of the saved file.
 
         Keyword arguments:
         checkins -- A list of dicts, each one data about a single checkin.
         """
+        user = self._get_user()
 
-        return None
+        kml = simplekml.Kml()
+
+        # The original Foursquare files had a Folder with name and
+        # description like this, so:
+        user_name = f"{user['firstName']} {user['lastName']}"
+        name = f"foursquare checkin history for {user_name}"
+        fol = kml.newfolder(name=name, description=name)
+
+        for checkin in checkins:
+            if "venue" not in checkin:
+                # I had some checkins with no data other than
+                # id, createdAt and source.
+                continue
+
+            venue_name = checkin["venue"]["name"]
+            tz_offset = self._get_checkin_timezone(checkin)
+            url = f'https://foursquare.com/v/{checkin["venue"]["id"]}'
+
+            description = [f'@<a href="{url}">{venue_name}</a>']
+            if "shout" in checkin and len(checkin["shout"]) > 0:
+                description.append('"{}"'.format(checkin["shout"]))
+            description.append(f"Timezone offset: {tz_offset}")
+
+            coords = [
+                (
+                    checkin["venue"]["location"]["lng"],
+                    checkin["venue"]["location"]["lat"],
+                )
+            ]
+
+            pnt = fol.newpoint(
+                name=venue_name,
+                description="<![CDATA[{}]]>".format('\n'.join(description)),
+                coords=coords,
+                # Both of these were set like this in Foursquare's original KML:
+                altitudemode=simplekml.AltitudeMode.relativetoground,
+                extrude=1,
+            )
+
+            # Foursquare's KML feeds had 'updated' and 'published' elements
+            # in the Placemark, but I don't *think* those are standard, so:
+            pnt.timestamp.when = (
+                datetime.utcfromtimestamp(checkin["createdAt"])
+                .replace(tzinfo=pytz.utc)
+                .isoformat()
+            )
+
+            # Use the address, if any:
+            if "location" in checkin["venue"]:
+                loc = checkin["venue"]["location"]
+                if "formattedAddress" in loc and len(loc["formattedAddress"]) > 0:
+                    address = ", ".join(loc["formattedAddress"])
+                    # While simplexml escapes other strings, it threw a wobbly
+                    # over '&' in addresses, so escape them:
+                    pnt.address = xml_escape(address)
+
+        kml.save(self.kml_filepath)
+
+        return self.kml_filepath
 
     def _get_checkin_timezone(self, checkin):
         """Given a checkin from the API, returns a string representing the
