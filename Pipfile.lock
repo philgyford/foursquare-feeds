@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3a9e4292a546993c8c1f3f01a7183f293efeb295fd8fa776b213273b95279572"
+            "sha256": "80b38e70cf842977f6542084ce3a210444ad838c078dca6528f2587c14676ba4"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -45,9 +45,11 @@
             "version": "==1!2019.9.11"
         },
         "ics": {
-            "editable": true,
-            "git": "https://github.com/C4ptainCrunch/ics.py.git",
-            "ref": "bd918ec7453a7cf73a906cdcc78bd88eb4bab71b"
+            "hashes": [
+                "sha256:a9c01479e49499beb82e4ca67321275cd1509ddba5e8b8e45aef8bb6015aa295"
+            ],
+            "index": "pypi",
+            "version": "==0.5"
         },
         "idna": {
             "hashes": [

@@ -1,9 +1,9 @@
 -i https://pypi.org/simple
--e git+https://github.com/C4ptainCrunch/ics.py.git@bd918ec7453a7cf73a906cdcc78bd88eb4bab71b#egg=ics
 arrow==0.11.0
 certifi==2019.9.11
 chardet==3.0.4
 foursquare==1!2019.9.11
+ics==0.5
 idna==2.8
 python-dateutil==2.8.0
 pytz==2019.2
