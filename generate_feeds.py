@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 current_dir = os.path.realpath(os.path.dirname(__file__))
 CONFIG_FILE = os.path.join(current_dir, "config.ini")
 
+# The kinds of file we can generate:
+VALID_KINDS = ["ics", "kml"]
+
 
 class FeedGenerator:
 
@@ -40,9 +43,13 @@ class FeedGenerator:
 
         self.api_access_token = config.get("Foursquare", "AccessToken")
         self.ics_filepath = config.get("Local", "IcsFilepath")
+        self.kml_filepath = config.get("Local", "KmlFilepath")
 
-    def generate(self):
+    def generate(self, kind="ics"):
         "Call this to fetch the data from the API and generate the file."
+        if kind not in VALID_KINDS:
+            raise ValueError(f"kind should be one of {', '.join(VALID_KINDS)}.")
+
         if self.fetch == "all":
             checkins = self._get_all_checkins()
         else:
@@ -51,12 +58,17 @@ class FeedGenerator:
         plural = "" if len(checkins) == 1 else "s"
         logger.info("Fetched {} checkin{} from the API".format(len(checkins), plural))
 
-        calendar = self._generate_calendar(checkins)
+        if kind == "ics":
+            data = self._generate_calendar(checkins)
+            filepath = self.ics_filepath
+        elif kind == "kml":
+            data = self._generate_kml(checkins)
+            filepath = self.kml_filepath
 
-        with open(self.ics_filepath, "w") as f:
-            f.writelines(calendar)
+        with open(filepath, "w") as f:
+            f.writelines(data)
 
-        logger.info("Generated calendar file {}".format(self.ics_filepath))
+        logger.info(f"Generated {kind} file {filepath}")
 
         exit(0)
 
@@ -165,6 +177,16 @@ class FeedGenerator:
 
         return c
 
+    def _generate_kml(self, checkins):
+        """Supplied with a list of checkin data from the API, generates
+        a TODO
+
+        Keyword arguments:
+        checkins -- A list of dicts, each one data about a single checkin.
+        """
+
+        return None
+
     def _get_checkin_timezone(self, checkin):
         """Given a checkin from the API, returns a string representing the
         timezone offset of that checkin.
@@ -210,6 +232,15 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-k",
+        "--kind",
+        action="store",
+        help="Either ics (default) or kml",
+        required=False,
+        type=str,
+    )
+
+    parser.add_argument(
         "-v",
         "--verbose",
         action="count",
@@ -231,8 +262,16 @@ if __name__ == "__main__":
     else:
         to_fetch = "recent"
 
+    if args.kind:
+        if args.kind in VALID_KINDS:
+            kind = args.kind
+        else:
+            raise ValueError(f"kind should be one of {', '.join(VALID_KINDS)}.")
+    else:
+        kind = "ics"
+
     generator = FeedGenerator(fetch=to_fetch)
 
-    generator.generate()
+    generator.generate(kind=kind)
 
     exit(0)
