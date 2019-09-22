@@ -37,9 +37,11 @@ or [pip](https://pip.pypa.io/en/stable/):
 
 ### 3. Set up config file
 
-Copy `config_example.ini` to `config.ini`. Change the `IcsFilepath` to wherever you want your file to be saved.
+Copy `config_example.ini` to `config.ini`.
 
-To get the `AccessToken` for your Foursquare app, you will have to go through the laborious procedure in step 4...
+Change the `IcsFilepath` and `KmlFilepath` to wherever you want your files to be saved.
+
+To get the `AccessToken` for your Foursquare app, you will have to go through the sometimes laborious procedure in step 4...
 
 
 ### 4. Get an access token
