@@ -56,7 +56,7 @@ class FeedGenerator:
             checkins = self._get_recent_checkins()
 
         plural = "" if len(checkins) == 1 else "s"
-        logger.info("Fetched {} checkin{} from the API".format(len(checkins), plural))
+        logger.info(f"Fetched {checkins} checkin{plural} from the API")
 
         if kind == "ics":
             data = self._generate_calendar(checkins)
@@ -92,9 +92,9 @@ class FeedGenerator:
                 # First time, set the correct total:
                 total_checkins = results["checkins"]["count"]
                 plural = "" if total_checkins == 1 else "s"
-                logger.debug("{} checkin{} to fetch".format(total_checkins, plural))
+                logger.debug(f"{total_checkins} checkin{plural} to fetch")
 
-            logger.debug("Fetched {}-{}".format((offset + 1), (offset + 250)))
+            logger.debug(f"Fetched {offset+1}-{offset+250}")
 
             checkins += results["checkins"]["items"]
             offset += 250
@@ -114,9 +114,7 @@ class FeedGenerator:
                 params={"limit": 250, "offset": offset, "sort": "newestfirst"}
             )
         except foursquare.FoursquareException as err:
-            logger.error(
-                "Error getting checkins, with offset of {}: {}".format(offset, err)
-            )
+            logger.error(f"Error getting checkins, with offset of {offset}: {err}")
             exit(1)
 
     def _get_user_url(self):
@@ -124,7 +122,7 @@ class FeedGenerator:
         try:
             user = self.client.users()
         except foursquare.FoursquareException as err:
-            logger.error("Error getting user: {}".format(err))
+            logger.error(f"Error getting user: {err}")
             exit(1)
 
         return user["user"]["canonicalUrl"]
@@ -150,10 +148,10 @@ class FeedGenerator:
 
             e = Event()
 
-            e.name = "@ {}".format(venue_name)
+            e.name = f"@ {venue_name}"
             e.location = venue_name
-            e.url = "{}/checkin/{}".format(user_url, checkin["id"])
-            e.uid = "{}@foursquare.com".format(checkin["id"])
+            e.url = f"{user_url}/checkin/{checkin['id']}"
+            e.uid = f"{checkin['id']}@foursquare.com"
             e.begin = checkin["createdAt"]
 
             # Use the 'shout', if any, and the timezone offset in the
@@ -161,7 +159,7 @@ class FeedGenerator:
             description = []
             if "shout" in checkin and len(checkin["shout"]) > 0:
                 description = [checkin["shout"]]
-            description.append("Timezone offset: {}".format(tz_offset))
+            description.append(f"Timezone offset: {tz_offset}")
             e.description = "\n".join(description)
 
             # Use the venue_name and the address, if any, for the location.
@@ -170,7 +168,7 @@ class FeedGenerator:
                 loc = checkin["venue"]["location"]
                 if "formattedAddress" in loc and len(loc["formattedAddress"]) > 0:
                     address = ", ".join(loc["formattedAddress"])
-                    location = "{}, {}".format(location, address)
+                    location = f"{location}, {address}"
             e.location = location
 
             c.events.add(e)
@@ -214,7 +212,7 @@ class FeedGenerator:
             symbol = ""
 
         # e.g. '+01:00' or '-08.00'
-        return "{}{}".format(symbol, offset).replace(".", ":")
+        return f"{symbol}{offset}".replace(".", ":")
 
 
 if __name__ == "__main__":
