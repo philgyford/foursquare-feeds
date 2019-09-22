@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 import argparse
 import configparser
+from datetime import datetime
 import logging
 import os
+import pytz
+from xml.sax.saxutils import escape as xml_escape
 
 import foursquare
 from ics import Calendar, Event
+import simplekml
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -13,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 current_dir = os.path.realpath(os.path.dirname(__file__))
 CONFIG_FILE = os.path.join(current_dir, "config.ini")
+
+# The kinds of file we can generate:
+VALID_KINDS = ["ics", "kml"]
 
 
 class FeedGenerator:
@@ -40,23 +47,27 @@ class FeedGenerator:
 
         self.api_access_token = config.get("Foursquare", "AccessToken")
         self.ics_filepath = config.get("Local", "IcsFilepath")
+        self.kml_filepath = config.get("Local", "KmlFilepath")
 
-    def generate(self):
+    def generate(self, kind="ics"):
         "Call this to fetch the data from the API and generate the file."
+        if kind not in VALID_KINDS:
+            raise ValueError(f"kind should be one of {', '.join(VALID_KINDS)}.")
+
         if self.fetch == "all":
             checkins = self._get_all_checkins()
         else:
             checkins = self._get_recent_checkins()
 
         plural = "" if len(checkins) == 1 else "s"
-        logger.info("Fetched {} checkin{} from the API".format(len(checkins), plural))
+        logger.info(f"Fetched {checkins} checkin{plural} from the API")
 
-        calendar = self._generate_calendar(checkins)
+        if kind == "ics":
+            filepath = self._generate_ics_file(checkins)
+        elif kind == "kml":
+            filepath = self._generate_kml_file(checkins)
 
-        with open(self.ics_filepath, "w") as f:
-            f.writelines(calendar)
-
-        logger.info("Generated calendar file {}".format(self.ics_filepath))
+        logger.info(f"Generated file {filepath}")
 
         exit(0)
 
@@ -80,9 +91,9 @@ class FeedGenerator:
                 # First time, set the correct total:
                 total_checkins = results["checkins"]["count"]
                 plural = "" if total_checkins == 1 else "s"
-                logger.debug("{} checkin{} to fetch".format(total_checkins, plural))
+                logger.debug(f"{total_checkins} checkin{plural} to fetch")
 
-            logger.debug("Fetched {}-{}".format((offset + 1), (offset + 250)))
+            logger.debug(f"Fetched {offset+1}-{offset+250}")
 
             checkins += results["checkins"]["items"]
             offset += 250
@@ -102,20 +113,34 @@ class FeedGenerator:
                 params={"limit": 250, "offset": offset, "sort": "newestfirst"}
             )
         except foursquare.FoursquareException as err:
-            logger.error(
-                "Error getting checkins, with offset of {}: {}".format(offset, err)
-            )
+            logger.error(f"Error getting checkins, with offset of {offset}: {err}")
             exit(1)
 
-    def _get_user_url(self):
-        "Returns the Foursquare URL for the authenticated user."
+    def _get_user(self):
+        "Returns details about the authenticated user."
         try:
             user = self.client.users()
         except foursquare.FoursquareException as err:
-            logger.error("Error getting user: {}".format(err))
+            logger.error(f"Error getting user: {err}")
             exit(1)
 
-        return user["user"]["canonicalUrl"]
+        return user["user"]
+
+    def _generate_ics_file(self, checkins):
+        """Supplied with a list of checkin data from the API, generates
+        and saves a .ics file.
+
+        Returns the filepath of the saved file.
+
+        Keyword arguments:
+        checkins -- A list of dicts, each one data about a single checkin.
+        """
+        calendar = self._generate_calendar(checkins)
+
+        with open(self.ics_filepath, "w") as f:
+            f.writelines(calendar)
+
+        return self.ics_filepath
 
     def _generate_calendar(self, checkins):
         """Supplied with a list of checkin data from the API, generates
@@ -124,7 +149,7 @@ class FeedGenerator:
         Keyword arguments:
         checkins -- A list of dicts, each one data about a single checkin.
         """
-        user_url = self._get_user_url()
+        user = self._get_user()
 
         c = Calendar()
 
@@ -133,15 +158,16 @@ class FeedGenerator:
                 # I had some checkins with no data other than
                 # id, createdAt and source.
                 continue
+
             venue_name = checkin["venue"]["name"]
             tz_offset = self._get_checkin_timezone(checkin)
 
             e = Event()
 
-            e.name = "@ {}".format(venue_name)
+            e.name = f"@ {venue_name}"
             e.location = venue_name
-            e.url = "{}/checkin/{}".format(user_url, checkin["id"])
-            e.uid = "{}@foursquare.com".format(checkin["id"])
+            e.url = f"{user['canonicalUrl']}/checkin/{checkin['id']}"
+            e.uid = f"{checkin['id']}@foursquare.com"
             e.begin = checkin["createdAt"]
 
             # Use the 'shout', if any, and the timezone offset in the
@@ -149,7 +175,7 @@ class FeedGenerator:
             description = []
             if "shout" in checkin and len(checkin["shout"]) > 0:
                 description = [checkin["shout"]]
-            description.append("Timezone offset: {}".format(tz_offset))
+            description.append(f"Timezone offset: {tz_offset}")
             e.description = "\n".join(description)
 
             # Use the venue_name and the address, if any, for the location.
@@ -158,12 +184,86 @@ class FeedGenerator:
                 loc = checkin["venue"]["location"]
                 if "formattedAddress" in loc and len(loc["formattedAddress"]) > 0:
                     address = ", ".join(loc["formattedAddress"])
-                    location = "{}, {}".format(location, address)
+                    location = f"{location}, {address}"
             e.location = location
 
             c.events.add(e)
 
         return c
+
+    def _generate_kml_file(self, checkins):
+        """Supplied with a list of checkin data from the API, generates
+        and saves a kml file.
+
+        Returns the filepath of the saved file.
+
+        Keyword arguments:
+        checkins -- A list of dicts, each one data about a single checkin.
+        """
+        user = self._get_user()
+
+        kml = simplekml.Kml()
+
+        # The original Foursquare files had a Folder with name and
+        # description like this, so:
+        user_name = f"{user['firstName']} {user['lastName']}"
+        name = f"foursquare checkin history for {user_name}"
+        fol = kml.newfolder(name=name, description=name)
+
+        for checkin in checkins:
+            if "venue" not in checkin:
+                # I had some checkins with no data other than
+                # id, createdAt and source.
+                continue
+
+            venue_name = checkin["venue"]["name"]
+            tz_offset = self._get_checkin_timezone(checkin)
+            url = f'https://foursquare.com/v/{checkin["venue"]["id"]}'
+
+            description = [f'@<a href="{url}">{venue_name}</a>']
+            if "shout" in checkin and len(checkin["shout"]) > 0:
+                description.append('"{}"'.format(checkin["shout"]))
+            description.append(f"Timezone offset: {tz_offset}")
+
+            coords = [
+                (
+                    checkin["venue"]["location"]["lng"],
+                    checkin["venue"]["location"]["lat"],
+                )
+            ]
+
+            visibility = 0 if "private" in checkin else 1
+
+            pnt = fol.newpoint(
+                name=venue_name,
+                description="<![CDATA[{}]]>".format('\n'.join(description)),
+                coords=coords,
+                visibility=visibility,
+                # Both of these were set like this in Foursquare's original KML:
+                altitudemode=simplekml.AltitudeMode.relativetoground,
+                extrude=1,
+            )
+
+            # Foursquare's KML feeds had 'updated' and 'published' elements
+            # in the Placemark, but I don't *think* those are standard, so:
+            pnt.timestamp.when = (
+                datetime.utcfromtimestamp(checkin["createdAt"])
+                .replace(tzinfo=pytz.utc)
+                .isoformat()
+            )
+
+            # Use the address, if any:
+            if "location" in checkin["venue"]:
+                loc = checkin["venue"]["location"]
+                if "formattedAddress" in loc and len(loc["formattedAddress"]) > 0:
+                    address = ", ".join(loc["formattedAddress"])
+                    # While simplexml escapes other strings, it threw a wobbly
+                    # over '&' in addresses, so escape them:
+                    pnt.address = xml_escape(address)
+
+        kml.save(self.kml_filepath)
+
+        return self.kml_filepath
 
     def _get_checkin_timezone(self, checkin):
         """Given a checkin from the API, returns a string representing the
@@ -192,7 +292,7 @@ class FeedGenerator:
             symbol = ""
 
         # e.g. '+01:00' or '-08.00'
-        return "{}{}".format(symbol, offset).replace(".", ":")
+        return f"{symbol}{offset}".replace(".", ":")
 
 
 if __name__ == "__main__":
@@ -207,6 +307,15 @@ if __name__ == "__main__":
         required=False,
         action="store_true",
         default=False,
+    )
+
+    parser.add_argument(
+        "-k",
+        "--kind",
+        action="store",
+        help="Either ics (default) or kml",
+        required=False,
+        type=str,
     )
 
     parser.add_argument(
@@ -231,8 +340,16 @@ if __name__ == "__main__":
     else:
         to_fetch = "recent"
 
+    if args.kind:
+        if args.kind in VALID_KINDS:
+            kind = args.kind
+        else:
+            raise ValueError(f"kind should be one of {', '.join(VALID_KINDS)}.")
+    else:
+        kind = "ics"
+
     generator = FeedGenerator(fetch=to_fetch)
 
-    generator.generate()
+    generator.generate(kind=kind)
 
     exit(0)

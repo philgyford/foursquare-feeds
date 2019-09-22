@@ -8,6 +8,8 @@ verify_ssl = true
 [packages]
 foursquare = "*"
 ics = {editable = true,git = "https://github.com/C4ptainCrunch/ics.py.git",ref = "bd918ec7453a7cf73a906cdcc78bd88eb4bab71b"}
+simplekml = "*"
+pytz = "*"
 
 [requires]
 python_version = "3.6"
