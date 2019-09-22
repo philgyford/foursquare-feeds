@@ -232,10 +232,13 @@ class FeedGenerator:
                 )
             ]
 
+            visibility = 0 if "private" in checkin else 1
+
             pnt = fol.newpoint(
                 name=venue_name,
                 description="<![CDATA[{}]]>".format('\n'.join(description)),
                 coords=coords,
+                visibility=visibility,
                 # Both of these were set like this in Foursquare's original KML:
                 altitudemode=simplekml.AltitudeMode.relativetoground,
                 extrude=1,
