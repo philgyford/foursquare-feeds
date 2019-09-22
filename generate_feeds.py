@@ -52,7 +52,7 @@ class FeedGenerator:
     def generate(self, kind="ics"):
         "Call this to fetch the data from the API and generate the file."
         if kind not in VALID_KINDS:
-            raise ValueError(f"kind should be one of {', '.join(VALID_KINDS)}.")
+            raise ValueError("kind should be one of {}.".format(", ".join(VALID_KINDS)))
 
         if self.fetch == "all":
             checkins = self._get_all_checkins()
@@ -60,14 +60,14 @@ class FeedGenerator:
             checkins = self._get_recent_checkins()
 
         plural = "" if len(checkins) == 1 else "s"
-        logger.info(f"Fetched {checkins} checkin{plural} from the API")
+        logger.info("Fetched {} checkin{} from the API".format(checkins, plural))
 
         if kind == "ics":
             filepath = self._generate_ics_file(checkins)
         elif kind == "kml":
             filepath = self._generate_kml_file(checkins)
 
-        logger.info(f"Generated file {filepath}")
+        logger.info("Generated file {}".format(filepath))
 
         exit(0)
 
@@ -91,9 +91,9 @@ class FeedGenerator:
                 # First time, set the correct total:
                 total_checkins = results["checkins"]["count"]
                 plural = "" if total_checkins == 1 else "s"
-                logger.debug(f"{total_checkins} checkin{plural} to fetch")
+                logger.debug("{} checkin{} to fetch".format(total_checkins, plural))
 
-            logger.debug(f"Fetched {offset+1}-{offset+250}")
+            logger.debug("Fetched {}-{}".format(offset + 1, offset + 250))
 
             checkins += results["checkins"]["items"]
             offset += 250
@@ -113,7 +113,9 @@ class FeedGenerator:
                 params={"limit": 250, "offset": offset, "sort": "newestfirst"}
             )
         except foursquare.FoursquareException as err:
-            logger.error(f"Error getting checkins, with offset of {offset}: {err}")
+            logger.error(
+                "Error getting checkins, with offset of {}: {}".format(offset, err)
+            )
             exit(1)
 
     def _get_user(self):
@@ -121,7 +123,7 @@ class FeedGenerator:
         try:
             user = self.client.users()
         except foursquare.FoursquareException as err:
-            logger.error(f"Error getting user: {err}")
+            logger.error("Error getting user: {}".format(err))
             exit(1)
 
         return user["user"]
@@ -164,10 +166,10 @@ class FeedGenerator:
 
             e = Event()
 
-            e.name = f"@ {venue_name}"
+            e.name = "@ {}".format(venue_name)
             e.location = venue_name
-            e.url = f"{user['canonicalUrl']}/checkin/{checkin['id']}"
-            e.uid = f"{checkin['id']}@foursquare.com"
+            e.url = "{}/checkin/{}".format(user["canonicalUrl"], checkin["id"])
+            e.uid = "{}@foursquare.com".format(checkin["id"])
             e.begin = checkin["createdAt"]
 
             # Use the 'shout', if any, and the timezone offset in the
@@ -175,7 +177,7 @@ class FeedGenerator:
             description = []
             if "shout" in checkin and len(checkin["shout"]) > 0:
                 description = [checkin["shout"]]
-            description.append(f"Timezone offset: {tz_offset}")
+            description.append("Timezone offset: {}".format(tz_offset))
             e.description = "\n".join(description)
 
             # Use the venue_name and the address, if any, for the location.
@@ -184,7 +186,7 @@ class FeedGenerator:
                 loc = checkin["venue"]["location"]
                 if "formattedAddress" in loc and len(loc["formattedAddress"]) > 0:
                     address = ", ".join(loc["formattedAddress"])
-                    location = f"{location}, {address}"
+                    location = "{}, {}".format(location, address)
             e.location = location
 
             c.events.add(e)
@@ -206,8 +208,8 @@ class FeedGenerator:
 
         # The original Foursquare files had a Folder with name and
         # description like this, so:
-        user_name = f"{user['firstName']} {user['lastName']}"
-        name = f"foursquare checkin history for {user_name}"
+        user_name = "{} {}".format(user["firstName"], user["lastName"])
+        name = "foursquare checkin history for {}".format(user_name)
         fol = kml.newfolder(name=name, description=name)
 
         for checkin in checkins:
@@ -218,12 +220,12 @@ class FeedGenerator:
 
             venue_name = checkin["venue"]["name"]
             tz_offset = self._get_checkin_timezone(checkin)
-            url = f'https://foursquare.com/v/{checkin["venue"]["id"]}'
+            url = "https://foursquare.com/v/{}".format(checkin["venue"]["id"])
 
-            description = [f'@<a href="{url}">{venue_name}</a>']
+            description = ['@<a href="{}">{}</a>'.format(url, venue_name)]
             if "shout" in checkin and len(checkin["shout"]) > 0:
                 description.append('"{}"'.format(checkin["shout"]))
-            description.append(f"Timezone offset: {tz_offset}")
+            description.append("Timezone offset: {}".format(tz_offset))
 
             coords = [
                 (
@@ -236,7 +238,7 @@ class FeedGenerator:
 
             pnt = fol.newpoint(
                 name=venue_name,
-                description="<![CDATA[{}]]>".format('\n'.join(description)),
+                description="<![CDATA[{}]]>".format("\n".join(description)),
                 coords=coords,
                 visibility=visibility,
                 # Both of these were set like this in Foursquare's original KML:
@@ -292,7 +294,7 @@ class FeedGenerator:
             symbol = ""
 
         # e.g. '+01:00' or '-08.00'
-        return f"{symbol}{offset}".replace(".", ":")
+        return "{}{}".format(symbol, offset).replace(".", ":")
 
 
 if __name__ == "__main__":
@@ -344,7 +346,7 @@ if __name__ == "__main__":
         if args.kind in VALID_KINDS:
             kind = args.kind
         else:
-            raise ValueError(f"kind should be one of {', '.join(VALID_KINDS)}.")
+            raise ValueError("kind should be one of {}.".format(", ".join(VALID_KINDS)))
     else:
         kind = "ics"
 
