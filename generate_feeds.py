@@ -60,7 +60,7 @@ class FeedGenerator:
             checkins = self._get_recent_checkins()
 
         plural = "" if len(checkins) == 1 else "s"
-        logger.info("Fetched {} checkin{} from the API".format(checkins, plural))
+        logger.info("Fetched {} checkin{} from the API".format(len(checkins), plural))
 
         if kind == "ics":
             filepath = self._generate_ics_file(checkins)
