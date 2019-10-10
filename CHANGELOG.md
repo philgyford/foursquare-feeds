@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.1 - 2019-10-10
+* Fix verbose output (it was outputting a lot of JSON).
+
 ## 2.2.0 - 2019-09-22
 * Fix so it works on python 3.5.
 
