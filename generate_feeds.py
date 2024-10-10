@@ -208,7 +208,8 @@ class FeedGenerator:
 
         # The original Foursquare files had a Folder with name and
         # description like this, so:
-        user_name = "{} {}".format(user["firstName"], user["lastName"])
+        names = [user.get("firstName", ""), user.get("lastName", "")]
+        user_name = " ".join(names).strip()
         name = "foursquare checkin history for {}".format(user_name)
         fol = kml.newfolder(name=name, description=name)
 
