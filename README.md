@@ -1,6 +1,6 @@
 # Foursquare Feeds
 
-A python script that will generate iCal (`.ics`) or KML files of your checkins on [Foursquare][4sq]/[Swarm][swarm].
+A Python script that will generate iCal (`.ics`) or KML files of your checkins on [Foursquare][4sq]/[Swarm][swarm].
 
 If you set it up to save the iCal file to a publicly-visible location on a webserver, and run the script regularly, you can subscribe to the feed in your favourite calendar application.
 
@@ -18,7 +18,7 @@ Foursquare [used to have such feeds][feeds] but they've stopped working for me.
 
 ## Installation
 
-This should work with python 3.5+.
+This should work with python 3.12 (and maybe others).
 
 ### 1. Make a Foursquare app
 
@@ -27,9 +27,9 @@ Go to https://foursquare.com/developers/apps and create a new App.
 
 ### 2. Install python requirements
 
-Either using [pipenv](https://pipenv.readthedocs.io/en/latest/):
+Either using [uv](https://github.com/astral-sh/uv):
 
-    $ pipenv install
+    $ uv sync
 
 or [pip](https://pip.pypa.io/en/stable/):
 
@@ -175,4 +175,3 @@ By Phil Gyford
 phil@gyford.com  
 https://www.gyford.com  
 https://github.com/philgyford/foursquare-feeds
-

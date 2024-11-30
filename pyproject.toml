@@ -1,0 +1,12 @@
+[project]
+name = "foursquare-feeds"
+version = "2.3.0"
+description = "A python script for generating an iCal feed from your Foursquare checkins"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+	"foursquare",
+	"ics",
+	"pytz",
+	"simplekml",
+]
